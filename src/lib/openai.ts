@@ -8,11 +8,9 @@ const openai = new OpenAI({
 });
 
 // 模型名可配置，选项见 .env.example
-// 2026年7月推荐：
-//   deepseek-v4-flash（最便宜，$0.14/$0.28 每百万token，1M上下文）
-//   gpt-4.1-nano（OpenAI最便宜，$0.10/$0.40 每百万token）
-//   gpt-4o-mini（仍可用，$0.15/$0.60 每百万token）
-const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+// 默认使用 DeepSeek V4 Flash（当前最便宜、上下文 1M）：deepseek-v4-flash
+// 如需使用 OpenAI 官方模型，请设置 OPENAI_BASE_URL=https://api.openai.com/v1 和 OPENAI_MODEL=gpt-4o-mini
+const MODEL = process.env.OPENAI_MODEL || "deepseek-v4-flash";
 
 const TONE_PROMPTS: Record<Tone, string> = {
   professional:
