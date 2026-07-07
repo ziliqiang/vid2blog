@@ -11,7 +11,19 @@ export function getCheckoutUrl(
     email: userEmail,
     success_url: successUrl,
   });
-  return `https://creem.io/checkout/${productId}?${params.toString()}`;
+  return `https://www.creem.io/payment/${productId}?${params.toString()}`;
+}
+
+export function getProCheckoutUrl(userEmail: string): string {
+  const productId = process.env.CREEM_PRO_PRODUCT_ID!;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vid2blog-two.vercel.app";
+  return getCheckoutUrl(productId, userEmail, `${appUrl}/dashboard?checkout=success`);
+}
+
+export function getBusinessCheckoutUrl(userEmail: string): string {
+  const productId = process.env.CREEM_BUSINESS_PRODUCT_ID!;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vid2blog-two.vercel.app";
+  return getCheckoutUrl(productId, userEmail, `${appUrl}/dashboard?checkout=success`);
 }
 
 export async function verifyWebhookSignature(

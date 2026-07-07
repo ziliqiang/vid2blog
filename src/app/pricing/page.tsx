@@ -75,7 +75,7 @@ export default function PricingPage() {
             </div>
           )}
 
-          <PricingCards demoMode={demo} />
+          <PricingCards demoMode={demo} userEmail={user?.email} />
 
           {/* FAQ Section */}
           <div className="max-w-3xl mx-auto mt-20">

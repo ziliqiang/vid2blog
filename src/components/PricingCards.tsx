@@ -2,9 +2,28 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
+import { getProCheckoutUrl, getBusinessCheckoutUrl } from "@/lib/creem";
 
-export default function PricingCards({ demoMode = false }: { demoMode?: boolean }) {
+export default function PricingCards({
+  demoMode = false,
+  userEmail,
+}: {
+  demoMode?: boolean;
+  userEmail?: string;
+}) {
   const { t } = useI18n();
+
+  const getCheckoutLink = (tierName: string): string => {
+    if (demoMode || !userEmail) return "/pricing";
+    const lower = tierName.toLowerCase();
+    if (lower.includes("pro") || lower === "pro") {
+      return getProCheckoutUrl(userEmail);
+    }
+    if (lower.includes("business") || lower === "business") {
+      return getBusinessCheckoutUrl(userEmail);
+    }
+    return "/pricing";
+  };
 
   const tiers = [
     {
@@ -37,7 +56,7 @@ export default function PricingCards({ demoMode = false }: { demoMode?: boolean 
         t("pricing.proF6"),
       ],
       cta: t("pricing.proCta"),
-      href: "/pricing",
+      href: getCheckoutLink("pro"),
       highlighted: true,
       isPaid: true,
     },
@@ -55,7 +74,7 @@ export default function PricingCards({ demoMode = false }: { demoMode?: boolean 
         t("pricing.businessF6"),
       ],
       cta: t("pricing.businessCta"),
-      href: "/pricing",
+      href: getCheckoutLink("business"),
       highlighted: false,
       isPaid: true,
     },
@@ -65,6 +84,7 @@ export default function PricingCards({ demoMode = false }: { demoMode?: boolean 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
       {tiers.map((tier) => {
         const showDemoNote = demoMode && tier.isPaid;
+        const isExternalCheckout = tier.isPaid && !demoMode && userEmail && tier.href.startsWith("http");
 
         return (
           <div
@@ -127,6 +147,19 @@ export default function PricingCards({ demoMode = false }: { demoMode?: boolean 
               <div className="mt-8 text-center py-2.5 px-4 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 text-sm font-medium cursor-not-allowed">
                 {tier.cta} ({t("pricing.demo")})
               </div>
+            ) : isExternalCheckout ? (
+              <a
+                href={tier.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-8 block text-center py-2.5 px-4 rounded-lg font-medium text-sm transition-colors ${
+                  tier.highlighted
+                    ? "bg-primary-600 text-white hover:bg-primary-700"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {tier.cta}
+              </a>
             ) : (
               <Link
                 href={tier.href}
