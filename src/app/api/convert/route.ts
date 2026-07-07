@@ -51,15 +51,16 @@ export async function POST(request: Request) {
 
     const { supabaseAdmin } = await import("@/lib/supabase-server");
 
-    // Get user's tier
+    // Get user's tier and admin status
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("subscription_tier")
+      .select("subscription_tier, is_admin")
       .eq("id", user.id)
       .single();
 
+    const isAdmin = userData?.is_admin === true;
     const tier = (userData?.subscription_tier as SubscriptionTier) || "free";
-    const limit = TIER_LIMITS[tier];
+    const limit = isAdmin ? -1 : TIER_LIMITS[tier];
 
     if (limit !== -1) {
       const { count } = await supabaseAdmin
