@@ -176,7 +176,14 @@ export default function DashboardPage() {
 
 function AuthForm() {
   const { t } = useI18n();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  // 修复：默认为登录模式，从 URL 参数读取模式
+  const [mode, setMode] = useState<"signin" | "signup">(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('mode') === 'signup' ? 'signup' : 'signin';
+    }
+    return 'signin';
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -201,6 +208,8 @@ function AuthForm() {
           password,
         });
         if (error) throw error;
+        // 修复：登录成功后刷新页面以更新状态
+        window.location.reload();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.errorDefault"));
