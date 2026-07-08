@@ -1,17 +1,41 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import type { SubscriptionTier } from "@/types";
+import crypto from "crypto";
+
+function verifyCreemSignature(body: string, signature: string): boolean {
+  const secret = process.env.CREEM_SECRET_KEY || "";
+  if (!secret || !signature) {
+    console.error("Missing CREEM_SECRET_KEY or signature");
+    return false;
+  }
+
+  // Creem 使用 HMAC-SHA256 签名，格式: sha256=<hash>
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(body);
+  const expectedSignature = `sha256=${hmac.digest("hex")}`;
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch (error) {
+    console.error("Signature verification failed:", error);
+    return false;
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.text();
     const signature = request.headers.get("creem-signature") || "";
 
-    // Verify webhook (implement proper signature verification in production)
-    // const isValid = await verifyWebhookSignature(body, signature);
-    // if (!isValid) {
-    //   return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    // }
+    // ✅ 验证 Webhook 签名（防止伪造请求）
+    if (!verifyCreemSignature(body, signature)) {
+      console.error("Invalid webhook signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
 
     const event = JSON.parse(body);
 
