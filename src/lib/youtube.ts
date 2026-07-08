@@ -43,11 +43,12 @@ export async function fetchYouTubeData(url: string): Promise<YouTubeTranscript> 
     // keep default title
   }
 
-  // Fetch transcript via timedtext API
+  // Fetch transcript using youtube-transcript package
   let transcriptText = "";
   try {
     transcriptText = await fetchTranscript(videoId);
-  } catch {
+  } catch (error) {
+    console.error("Transcript fetch error:", error);
     throw new Error(
       "This video doesn't have captions enabled. Try a different video."
     );
@@ -74,89 +75,22 @@ export async function fetchYouTubeData(url: string): Promise<YouTubeTranscript> 
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
-  // Step 1: Fetch the watch page to get the caption track URL
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  const watchRes = await fetch(watchUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-  });
+  // 使用 youtube-transcript 包（专业、稳定、已处理所有 edge case）
+  // 相比于手写正则解析 HTML，这个包直接调用 YouTube 内部 API
+  const { YoutubeTranscript } = await import("youtube-transcript");
 
-  if (!watchRes.ok) {
-    throw new Error("Failed to fetch video page");
+  const snippets = await YoutubeTranscript.fetchTranscript(videoId);
+  if (!snippets || snippets.length === 0) {
+    throw new Error("No transcript available");
   }
 
-  const watchHtml = await watchRes.text();
+  const text = snippets
+    .map((s: { text: string }) => s.text)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  // Extract caption tracks from the page
-  const captionTracksMatch = watchHtml.match(
-    /"captionTracks":\s*(\[.*?\])/
-  );
-
-  if (!captionTracksMatch) {
-    throw new Error("No caption tracks found");
-  }
-
-  let captionTracks;
-  try {
-    captionTracks = JSON.parse(captionTracksMatch[1]);
-  } catch {
-    throw new Error("Failed to parse caption tracks");
-  }
-
-  if (!captionTracks || captionTracks.length === 0) {
-    throw new Error("No caption tracks available");
-  }
-
-  // Prefer English, otherwise use the first track
-  const englishTrack =
-    captionTracks.find((t: { languageCode: string }) =>
-      t.languageCode.startsWith("en")
-    ) || captionTracks[0];
-
-  const captionUrl = englishTrack.baseUrl;
-  if (!captionUrl) {
-    throw new Error("Caption URL not found");
-  }
-
-  // Step 2: Fetch the caption data (XML format)
-  const captionRes = await fetch(captionUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    },
-  });
-
-  if (!captionRes.ok) {
-    throw new Error("Failed to fetch captions");
-  }
-
-  const captionXml = await captionRes.text();
-
-  // Parse XML to extract text
-  const textSegments = captionXml.matchAll(/<text[^>]*>(.*?)<\/text>/g);
-  const texts: string[] = [];
-
-  for (const match of textSegments) {
-    let text = match[1];
-    // Decode HTML entities
-    text = text
-      .replace(/&amp;/g, "&")
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&nbsp;/g, " ");
-    texts.push(text);
-  }
-
-  if (texts.length === 0) {
-    throw new Error("No text found in captions");
-  }
-
-  return texts.join(" ").replace(/\s+/g, " ").trim();
+  return text;
 }
 
 export function validateYouTubeUrl(url: string): boolean {
