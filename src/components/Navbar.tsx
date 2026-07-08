@@ -89,12 +89,19 @@ export default function Navbar() {
               <LanguageSwitcher />
               <ThemeToggle />
               {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                >
-                  {t("nav.signOut")}
-                </button>
+                <>
+                  {/* 显示用户邮箱 */}
+                  <span className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-300 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    {user.email}
+                  </span>
+                  {/* 退出按钮 */}
+                  <button
+                    onClick={handleSignOut}
+                    className="text-sm font-medium px-4 py-2 rounded-lg text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {t("nav.signOut")}
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
@@ -104,7 +111,7 @@ export default function Navbar() {
                     {t("nav.signIn")}
                   </Link>
                   <Link
-                    href="/dashboard"
+                    href="/dashboard?mode=signup"
                     className="text-sm font-medium px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                   >
                     {t("nav.getStarted")}
