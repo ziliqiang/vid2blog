@@ -48,10 +48,20 @@ export async function fetchYouTubeData(url: string): Promise<YouTubeTranscript> 
   try {
     transcriptText = await fetchTranscript(videoId);
   } catch (error) {
-    console.error("Transcript fetch error:", error);
-    throw new Error(
-      "This video doesn't have captions enabled. Try a different video."
-    );
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("Transcript fetch error:", errorMsg);
+
+    // 尝试备用方案：直接调用 youtubetranscript.com API
+    console.log("Trying fallback: youtubetranscript.com API");
+    try {
+      transcriptText = await fetchTranscriptFallback(videoId);
+    } catch (fallbackError) {
+      const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      console.error("Fallback also failed:", fallbackMsg);
+      throw new Error(
+        `Could not fetch captions: ${errorMsg} | Fallback: ${fallbackMsg}`
+      );
+    }
   }
 
   if (!transcriptText || transcriptText.trim().length < 10) {
@@ -75,8 +85,7 @@ export async function fetchYouTubeData(url: string): Promise<YouTubeTranscript> 
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
-  // 使用 youtube-transcript 包（专业、稳定、已处理所有 edge case）
-  // 相比于手写正则解析 HTML，这个包直接调用 YouTube 内部 API
+  // 使用 youtube-transcript 包
   const { YoutubeTranscript } = await import("youtube-transcript");
 
   const snippets = await YoutubeTranscript.fetchTranscript(videoId);
@@ -91,6 +100,32 @@ async function fetchTranscript(videoId: string): Promise<string> {
     .trim();
 
   return text;
+}
+
+/**
+ * 备用方案：直接调用 youtubetranscript.com 的免费 API
+ * 这个服务专门用于获取 YouTube 字幕，稳定可靠
+ */
+async function fetchTranscriptFallback(videoId: string): Promise<string> {
+  const res = await fetch(
+    `https://youtubetranscript.com/?v=${videoId}&t=text`,
+    {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(`youtubetranscript.com returned ${res.status}`);
+  }
+
+  const text = await res.text();
+  if (!text || text.trim().length < 10) {
+    throw new Error("Empty transcript from fallback");
+  }
+
+  return text.trim();
 }
 
 export function validateYouTubeUrl(url: string): boolean {
