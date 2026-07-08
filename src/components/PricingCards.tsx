@@ -13,16 +13,35 @@ export default function PricingCards({
   const { t } = useI18n();
 
   const handleUpgrade = async (plan: string) => {
+    console.log("[PricingCards] Upgrade button clicked, plan:", plan);
+
     if (demoMode || !userEmail) {
+      console.log("[PricingCards] Demo mode or no user email, redirecting to dashboard");
       window.location.href = "/dashboard";
       return;
     }
 
     try {
+      console.log("[PricingCards] Getting session...");
       const { supabase } = await import("@/lib/supabase");
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token || "";
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
+      if (sessionError) {
+        console.error("[PricingCards] Session error:", sessionError);
+        alert("获取登录信息失败，请重新登录");
+        return;
+      }
+
+      const accessToken = sessionData.session?.access_token || "";
+      console.log("[PricingCards] Access token:", accessToken ? "exists" : "missing");
+
+      if (!accessToken) {
+        alert("登录已过期，请重新登录");
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      console.log("[PricingCards] Calling API:", "/api/creem-checkout");
       const response = await fetch("/api/creem-checkout", {
         method: "POST",
         headers: {
@@ -32,15 +51,23 @@ export default function PricingCards({
         body: JSON.stringify({ plan }),
       });
 
+      console.log("[PricingCards] API response status:", response.status);
       const data = await response.json();
+      console.log("[PricingCards] API response data:", data);
+
       if (data.checkoutUrl) {
+        console.log("[PricingCards] Redirecting to:", data.checkoutUrl);
         window.location.href = data.checkoutUrl;
+      } else if (data.error) {
+        console.error("[PricingCards] API error:", data.error);
+        alert(`升级失败: ${data.error}`);
       } else {
-        alert(t("pricing.upgradeFailed") || "升级失败，请重试");
+        console.error("[PricingCards] No checkout URL in response");
+        alert("升级失败，请重试或联系支持");
       }
     } catch (error) {
-      console.error("Checkout error:", error);
-      alert(t("pricing.upgradeFailed") || "升级失败，请重试");
+      console.error("[PricingCards] Checkout error:", error);
+      alert(`升级失败: ${error instanceof Error ? error.message : "未知错误"}`);
     }
   };
 
