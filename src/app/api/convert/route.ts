@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/supabase-server";
-import { fetchYouTubeData } from "@/lib/youtube";
 import { generateBlogPost } from "@/lib/openai";
-import { isDemoMode, DEMO_USER } from "@/lib/demo-mode";
+import { isDemoMode } from "@/lib/demo-mode";
 import { generateDemoBlogPost } from "@/lib/demo-data";
 import { TIER_LIMITS, type Tone, type SubscriptionTier } from "@/types";
 
@@ -13,7 +12,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { youtubeUrl, tone } = await request.json();
+    const { youtubeUrl, tone, transcript, videoTitle, thumbnailUrl } =
+      await request.json();
 
     if (!youtubeUrl) {
       return NextResponse.json(
@@ -32,11 +32,8 @@ export async function POST(request: Request) {
 
     // Demo mode: return mock data
     if (isDemoMode()) {
-      // Simulate processing delay
       await new Promise((r) => setTimeout(r, 2000));
-
       const result = generateDemoBlogPost(youtubeUrl, tone);
-
       return NextResponse.json({
         ...result,
         postId: result.postId,
@@ -51,7 +48,6 @@ export async function POST(request: Request) {
 
     const { supabaseAdmin } = await import("@/lib/supabase-server");
 
-    // Get user's tier and admin status
     const { data: userData } = await supabaseAdmin
       .from("users")
       .select("subscription_tier, is_admin")
@@ -80,11 +76,42 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fetch YouTube transcript
-    const youtubeData = await fetchYouTubeData(youtubeUrl);
+    // 如果没有客户端发来的 transcript，尝试在服务端获取
+    let finalTranscript = transcript;
+    let finalThumbnail = thumbnailUrl;
+    let finalTitle = videoTitle;
 
-    // Generate blog post
-    const blogPost = await generateBlogPost(youtubeData.text, tone);
+    if (!finalTranscript) {
+      console.log(
+        "[Convert] No client transcript, trying server-side fetch..."
+      );
+      try {
+        const { fetchYouTubeData } = await import("@/lib/youtube");
+        const youtubeData = await fetchYouTubeData(youtubeUrl);
+        finalTranscript = youtubeData.text;
+        finalThumbnail = finalThumbnail || youtubeData.thumbnailUrl;
+        finalTitle = finalTitle || youtubeData.title;
+      } catch (serverError) {
+        console.error("[Convert] Server-side fetch also failed");
+        return NextResponse.json(
+          {
+            error:
+              "Could not fetch captions. The video may not have captions enabled, or our server is unable to reach YouTube. Please try again or use a different video.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (!finalTranscript || finalTranscript.trim().length < 10) {
+      return NextResponse.json(
+        { error: "No transcript content available for this video." },
+        { status: 400 }
+      );
+    }
+
+    // Generate blog post using AI
+    const blogPost = await generateBlogPost(finalTranscript, tone);
 
     // Save to database
     const { data: post, error } = await supabaseAdmin
@@ -96,7 +123,7 @@ export async function POST(request: Request) {
         content: blogPost.content,
         tone,
         word_count: blogPost.wordCount,
-        thumbnail_url: youtubeData.thumbnailUrl,
+        thumbnail_url: finalThumbnail,
       })
       .select()
       .single();
@@ -109,7 +136,7 @@ export async function POST(request: Request) {
       title: blogPost.title,
       content: blogPost.content,
       wordCount: blogPost.wordCount,
-      thumbnailUrl: youtubeData.thumbnailUrl,
+      thumbnailUrl: finalThumbnail,
       postId: post?.id,
     });
   } catch (error) {

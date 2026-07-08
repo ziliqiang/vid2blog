@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase, isDemoMode } from "@/lib/supabase";
 import { useI18n } from "@/lib/i18n/context";
 import { convertDemoVideo } from "@/lib/client-demo";
+import { fetchYouTubeTranscript, isValidYouTubeUrl } from "@/lib/client-youtube";
 import type { Tone, ConvertResult } from "@/types";
 
 type ConvertState = "idle" | "fetching" | "generating" | "done" | "error";
@@ -33,14 +34,19 @@ export default function ConvertForm({
       return;
     }
 
+    // 客户端验证 URL 格式
+    if (!isValidYouTubeUrl(url)) {
+      setError("Invalid YouTube URL. Please provide a valid video link.");
+      return;
+    }
+
     setState("fetching");
     setError("");
 
     try {
-      // Demo mode: generate client-side, no API call needed
+      // Demo mode
       if (demo) {
         setState("generating");
-        // Simulate loading delay for better UX
         await new Promise((r) => setTimeout(r, 1500));
         const data = convertDemoVideo(url, tone);
         setResult(data);
@@ -49,7 +55,17 @@ export default function ConvertForm({
         return;
       }
 
-      // Real mode: call API
+      // 第一步：在浏览器获取字幕（绕过 Vercel IP 限制）
+      setState("fetching");
+      console.log("[ConvertForm] Fetching transcript client-side...");
+      const youtubeData = await fetchYouTubeTranscript(url);
+      console.log(
+        "[ConvertForm] Transcript obtained:",
+        youtubeData.transcript.length,
+        "chars"
+      );
+
+      // 第二步：获取 access token
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
 
@@ -59,15 +75,21 @@ export default function ConvertForm({
         return;
       }
 
+      // 第三步：调用后端 API 进行 AI 生成和存储
       setState("generating");
-
       const res = await fetch("/api/convert", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ youtubeUrl: url, tone }),
+        body: JSON.stringify({
+          youtubeUrl: url,
+          tone,
+          transcript: youtubeData.transcript,
+          videoTitle: youtubeData.title,
+          thumbnailUrl: youtubeData.thumbnailUrl,
+        }),
       });
 
       const data = await res.json();
@@ -80,6 +102,7 @@ export default function ConvertForm({
       setState("done");
       onConvertComplete?.(data);
     } catch (err) {
+      console.error("[ConvertForm] Error:", err);
       setError(err instanceof Error ? err.message : t("auth.errorDefault"));
       setState("error");
     }
