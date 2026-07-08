@@ -16,8 +16,11 @@ export default function PricingPage() {
   useEffect(() => {
     setDemo(isDemoMode());
     supabase.auth.getSession().then(async ({ data }) => {
+      console.log("[PricingPage] Session data:", data.session?.user?.email);
       if (data.session?.user) {
-        setUser({ email: data.session.user.email || "" });
+        const userEmail = data.session.user.email || "";
+        console.log("[PricingPage] Setting user email:", userEmail);
+        setUser({ email: userEmail });
 
         try {
           const res = await fetch("/api/usage", {
@@ -26,12 +29,15 @@ export default function PricingPage() {
             },
           });
           if (res.ok) {
-            const data = await res.json();
-            setTier(data.tier || "free");
+            const usageData = await res.json();
+            console.log("[PricingPage] User tier:", usageData.tier);
+            setTier(usageData.tier || "free");
           }
-        } catch {
-          // ignore
+        } catch (error) {
+          console.error("[PricingPage] Failed to fetch usage:", error);
         }
+      } else {
+        console.log("[PricingPage] No session found");
       }
     });
   }, []);
