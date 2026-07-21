@@ -1,0 +1,33 @@
+📸 需要创建 OG 分享图片
+
+文件名: og-image.png
+尺寸: 1200 x 630 像素
+格式: PNG 或 JPG
+
+内容建议:
+- 主标题: "Vid2Blog"
+- 副标题: "Turn YouTube Videos Into Blog Posts"
+- 图标: YouTube 图标 + 箭头 + 文档图标
+- 背景色: 蓝色渐变 (#2563eb)
+- 字体: 清晰、大号、易读
+
+快速创建方式:
+1. 使用 Canva (canva.com)
+   - 选择 "Social Media" -> "Facebook Post" 模板
+   - 调整尺寸为 1200x630
+   - 添加文字和图标
+   - 下载为 PNG
+
+2. 使用 Figma (figma.com)
+   - 创建 1200x630 画布
+   - 设计图片
+   - 导出为 PNG
+
+3. 使用在线工具
+   - https://www.opengraph.xyz/
+   - https://ogimage.gallery/
+
+完成后:
+- 将图片命名为 og-image.png
+- 放到 vid2blog-app/public/ 目录
+- 删除此提醒文件

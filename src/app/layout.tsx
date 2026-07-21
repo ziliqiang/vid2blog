@@ -5,12 +5,44 @@ import { I18nProvider } from "@/lib/i18n/context";
 export const metadata: Metadata = {
   title: "Vid2Blog - Turn YouTube Videos Into Blog Posts in One Click",
   description:
-    "Save 2 hours per video. Paste a YouTube URL, get a publication-ready blog post powered by AI.",
+    "Turn YouTube videos into SEO-optimized blog posts in one click. Save 2 hours per video with AI-powered content generation. Professional, casual, and tutorial writing styles. Get started free with 3 posts per month.",
+  metadataBase: new URL('https://vid2blog.aitk.asia'),
   openGraph: {
     title: "Vid2Blog - Turn YouTube Videos Into Blog Posts",
     description:
-      "Paste a YouTube URL, get a publication-ready blog post in seconds.",
+      "Save 2 hours per video. Paste a YouTube URL, get a publication-ready blog post with AI-powered content generation.",
+    url: 'https://vid2blog.aitk.asia',
+    siteName: 'Vid2Blog',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Vid2Blog - Turn YouTube Videos Into Blog Posts'
+      }
+    ],
+    locale: 'en_US',
     type: "website",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Vid2Blog - Turn YouTube Videos Into Blog Posts',
+    description: 'Save 2 hours per video with AI-powered content generation.',
+    images: ['/og-image.png']
+  },
+  alternates: {
+    canonical: 'https://vid2blog.aitk.asia'
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
