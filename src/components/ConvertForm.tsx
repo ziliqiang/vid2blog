@@ -55,10 +55,29 @@ export default function ConvertForm({
         return;
       }
 
-      // 第一步：在浏览器获取字幕（绕过 Vercel IP 限制）
+      // 第一步：通过服务端 API 获取字幕（绕过 GFW 限制）
       setState("fetching");
-      console.log("[ConvertForm] Fetching transcript client-side...");
-      const youtubeData = await fetchYouTubeTranscript(url);
+      console.log("[ConvertForm] Fetching transcript via server API...");
+
+      const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)?.[1];
+      if (!videoId) {
+        throw new Error("Invalid YouTube URL");
+      }
+
+      const transcriptRes = await fetch(`/api/transcript?v=${videoId}`);
+      if (!transcriptRes.ok) {
+        const errorData = await transcriptRes.json();
+        throw new Error(errorData.error || "Failed to fetch transcript");
+      }
+
+      const transcriptData = await transcriptRes.json();
+      const youtubeData = {
+        transcript: transcriptData.transcript,
+        videoId: videoId,
+        title: `YouTube Video ${videoId}`,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+      };
+
       console.log(
         "[ConvertForm] Transcript obtained:",
         youtubeData.transcript.length,
